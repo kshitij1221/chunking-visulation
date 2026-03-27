@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Text Chunker Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #151515;
+    --border: #2a2a2a;
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 40px 32px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 32px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    align-items: flex-end;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  select, input[type="number"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    padding: 9px 14px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 220px;
+  }
+
+  select:focus, input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+
+  input[type="number"] {
+    width: 90px;
+    min-width: unset;
+  }
+
+  .select-wrapper {
+    position: relative;
+  }
+
+  .select-wrapper::after {
+    content: '▾';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    pointer-events: none;
+    font-size: 0.9rem;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    padding: 14px;
+    border-radius: 4px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.7;
+    margin-bottom: 16px;
+    min-height: 130px;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus { border-color: var(--accent); }
+
+  .run-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: transform 0.1s, background 0.2s;
+    align-self: flex-end;
+  }
+
+  .run-btn:hover { background: #fff; transform: translateY(-1px); }
+  .run-btn:active { transform: translateY(0); }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    margin-top: 8px;
+  }
+
+  .output-area { margin-top: 8px; }
+
+  .chunk-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  .chunks-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .chunk-card {
+    border-radius: 4px;
+    padding: 14px 18px;
+    border-left: 3px solid;
+    animation: slideIn 0.25s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .chunk-header {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    opacity: 0.75;
+  }
+
+  .chunk-text {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #e8e8e8;
+  }
+
+  .empty-state {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 28px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  .sentence-num-control { display: none; }
+  .sentence-num-control.visible { display: flex; }
+</style>
+</head>
+<body>
+
+<h1>TEXT CHUNKER</h1>
+<p class="subtitle">Visualize chunking strategies</p>
+
+<div class="section-label">Input Text</div>
+<textarea id="inputText" rows="5">Machine learning is a subset of artificial intelligence. It focuses on building systems that learn from data and improve over time.
+
+Applications include healthcare, finance, and robotics. Advanced techniques like neural networks are key to its success. Deep learning models can process vast amounts of unstructured data. This makes them powerful tools for pattern recognition.</textarea>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Chunking Mode</label>
+    <div class="select-wrapper">
+      <select id="modeSelect" onchange="onModeChange()">
+        <option value="paragraph">Paragraph-based Chunking</option>
+        <option value="sentence">Sentence-based Chunking</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="control-group sentence-num-control" id="sentenceControl">
+    <label>Sentences / Chunk</label>
+    <input type="number" id="sentPerChunk" value="2" min="1" max="20">
+  </div>
+
+  <button class="run-btn" onclick="runChunker()">▶ Chunk It</button>
+</div>
+
+<hr class="divider">
+
+<div class="output-area" id="outputArea">
+  <div class="empty-state">Hit "Chunk It" to see your chunks appear here.</div>
+</div>
+
+<script>
+  const COLORS = ['#e8ff47','#ff6b35','#4ecdc4','#c77dff','#ff9f1c','#2ec4b6','#f7c59f','#e84855'];
+
+  function onModeChange() {
+    const mode = document.getElementById('modeSelect').value;
+    document.getElementById('sentenceControl').classList.toggle('visible', mode === 'sentence');
+  }
+
+  function paragraphChunker(text) {
+    return text.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
+  }
+
+  function sentenceTokenize(text) {
+    const raw = text.replace(/\n+/g, ' ');
+    const sentences = [];
+    let current = '';
+    for (let i = 0; i < raw.length; i++) {
+      current += raw[i];
+      if (['.', '!', '?'].includes(raw[i])) {
+        const next = raw[i + 1];
+        if (!next || next === ' ') {
+          const trimmed = current.trim();
+          if (trimmed) sentences.push(trimmed);
+          current = '';
+        }
+      }
+    }
+    if (current.trim()) sentences.push(current.trim());
+    return sentences;
+  }
+
+  function sentenceChunker(text, n) {
+    const sentences = sentenceTokenize(text);
+    const chunks = [];
+    for (let i = 0; i < sentences.length; i += n) {
+      chunks.push(sentences.slice(i, i + n).join(' '));
+    }
+    return chunks;
+  }
+
+  function runChunker() {
+    const text = document.getElementById('inputText').value.trim();
+    if (!text) return;
+
+    const mode = document.getElementById('modeSelect').value;
+    const chunks = mode === 'paragraph'
+      ? paragraphChunker(text)
+      : sentenceChunker(text, parseInt(document.getElementById('sentPerChunk').value) || 2);
+
+    renderOutput(chunks, mode);
+  }
+
+  function renderOutput(chunks, mode) {
+    const area = document.getElementById('outputArea');
+    if (!chunks.length) {
+      area.innerHTML = '<div class="empty-state">No chunks found. Try adding more text.</div>';
+      return;
+    }
+
+    const modeLabel = mode === 'paragraph' ? 'Paragraph' : 'Sentence';
+    let html = `<div class="chunk-count">◈ ${chunks.length} chunk${chunks.length !== 1 ? 's' : ''} · ${modeLabel}-based</div>`;
+    html += '<div class="chunks-grid">';
+
+    chunks.forEach((chunk, i) => {
+      const color = COLORS[i % COLORS.length];
+      const delay = i * 0.07;
+      html += `
+        <div class="chunk-card" style="border-color:${color}; background:${color}12; animation-delay:${delay}s;">
+          <div class="chunk-header" style="color:${color};">chunk_${String(i + 1).padStart(2, '0')}</div>
+          <div class="chunk-text">${escapeHtml(chunk)}</div>
+        </div>`;
+    });
+
+    html += '</div>';
+    area.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // Run on load
+  onModeChange();
+  runChunker();
+</script>
+</body>
+</html>
